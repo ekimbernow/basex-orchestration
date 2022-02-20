@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." name="basex-orchestration" default="deploy-to-basex">
+  <!-- ==================================
+       General build and deployment
+       for BaseX Orchestration
+       ================================== -->
+  
+  <property file="./.build.properties"/>
+  <property file="${user.home}/.build.properties"/>
+
+  <property name="build.dir" location="${basedir}/build"/>
+  <property name="target.dir" location="${basedir}/target"/>
+
+  <!-- The BaseX bin/ directory must be in the PATH for this to work, otherwise
+       provide absolute path to the script.
+       
+       "basex" is the standalone basex client.
+    -->
+  <property name="basex.home.dir" location="/var/opt/basex"/>
+  <property name="basex.command" value="${basex.home.dir}/bin/basex"/>
+  
+  
+  <property name="xsl.src" location="${basedir}/xsl"/>
+  <property name="xquery.src" location="${basedir}/xquery"/>
+  <property name="basex.src" location="${basedir}"/>
+  <property name="basex.module.src" location="${xquery.src}/modules"/>
+  
+  <property name="basex.zip.package.name" value="orch-xquery-basex"/>
+  <property name="basex.zip.package.dir" location="${build.dir}/${basex.zip.package.name}"/>
+  
+  
+  <!-- Default location of the BaseX XQuery repository directory.
+    
+       See https://docs.basex.org/wiki/Repository
+     -->
+  <property name="basex.repo.dir" value="${user.home}/repo"/>
+  
+  <tstamp>
+    <format property="build-date-time"
+      pattern="yyyy-MM-dd HH:mm:SSS z"/>
+  </tstamp>
+  
+  <target name="init">
+    <!-- Do any initialization and precondition checks here -->
+    <tstamp/>
+  </target>
+  
+  <target name="clean">
+    <delete dir="${build.dir}" failonerror="false"/>
+    <mkdir dir="${build.dir}"/>
+    <delete dir="${target.dir}" failonerror="false"/>
+    <mkdir dir="${target.dir}"/>
+    <delete dir="${basex.zip.package.dir}" failonerror="false"/>
+  </target>
+  
+  <target name="build-basex-zip-package" depends="init, clean"
+    description="Prepares the files for the BaseX repo Zip module package"
+    >
+    <mkdir dir="${basex.zip.package.dir}/org/basex-orchestration/xquery/module"/>
+
+    <!-- The BaseX convention is that the package namespace URI is translated to a directory path,
+         i.e., org/basex-orchestration/xquery/module/ that then contains the module file.
+      -->
+    <copy todir="${basex.zip.package.dir}/org/basex-orchestration/xquery/module">
+      <fileset dir="${xquery.src}/modules">
+        <include name="*"/>
+      </fileset>      
+    </copy>
+    <!-- Remove any "at" clauses from module imports -->
+    <replaceregexp 
+      match="(import module.+)(\s+at\s+([^;]+))"
+      replace="\1"
+      byline="false">
+      <fileset dir="${basex.zip.package.dir}/org/basex-orchestration/xquery/module">
+        <include name="**/*.xq*"/>
+      </fileset>
+    </replaceregexp>
+  </target>
+  
+  <target name="package-basex-zip-package" depends="build-basex-zip-package"
+    description="Packages the XQuery package as a Zip file"
+    >
+    <zip basedir="${basex.zip.package.dir}"
+      destfile="${target.dir}/${basex.zip.package.name}.zip"
+      >
+      <include name="**/*"/>
+    </zip>
+  </target>
+  
+  <target name="deploy-modules-to-basex" depends="package-basex-zip-package"
+    description="Deploys the XQuery module package to the BaseX repo directory"
+    >
+    <exec executable="${basex.command}" >
+      <arg value="-c"/>
+      <arg value="xquery archive:extract-to(db:option('repopath'), fetch:binary('${target.dir}/${basex.zip.package.name}.zip'))"/>
+    </exec>
+    <exec executable="${basex.command}" >
+      <arg value="-c"/>
+      <arg value="repo list"/>
+    </exec>
+    
+  </target>
+  
+  <target name="deploy-to-basex" depends="deploy-modules-to-basex"
+    description="Deploys all the stuff to BaseX"
+    >
+  </target>
+</project>
