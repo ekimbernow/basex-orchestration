@@ -2,6 +2,8 @@
 
 Provides a set of functions for managing the creation of BaseX jobs that run functions from other modules. The orchestration infrastructure runs sequences of jobs in order to perform separate transactions.
 
+## Overview
+
 Each job is constructed as an XQuery that runs the specified function from the specified module with zero or more string parameters.
 
 The implementing module is `src/main/xquery/modules/orchestration.xqm`, which provides functions for constructing and then running jobs. The `database-admin.xqm` module included with this project serves as an example of how to use functions from other modules as jobs and provides a set of convenience functions for manipulating BaseX databases (create, drop, copy, rename, etc.).
@@ -53,4 +55,27 @@ declare function dbadmin:makeSwapJobs($from as xs:string, $to as xs:string) as x
 These job-making functions then make it easy to compose sets of actions together to form a larger task.
 
 The included `logging.xqm` module provides logging utilities for logging both non-updating actions (`logging:logTolog()`) and updating activities (`logging:logToConsole()`). The `logToLog()` function just uses `prof:dump()`, while `logToConsole()` usese both `prof:dump()` and `update:output()` so that messages from updates go to the primary console as well as to the debugging log.
+
+The unit test script `src/test/xquery/test-orchestration.xqm` exercises the orchestration and demonstrates how to construct and run jobs.
+
+Run the tests using the BaseX `TEST` command:
+
+```
+test /Users/eliot.kimber/git/basex-orchestration/src/test/xquery/test-orchestration.xqm
+```
+
+Note that as of 20 Feb 2022 and BaseX 9.6.4 the tests do not all pass because the jobs are not run until the test script itself is run, so the expected results are not available to the after-test functions that look for expected changes (i.e., databases that have been created, dropped, renamed, etc.).
+
+## Building
+
+To deploy the modules to BaseX, run the Ant script `src/main/build.xml`. The default target creates a BaseX module package and deploys it to BaseX.
+
+To configure the deployment, create the file `.build.properties` in either the `src/main` directory or in your home directory and set the following properties:
+
+```
+basex.home.dir=/Users/eliot.kimber/apps/basex
+basex.repo.dir=/Users/eliot.kimber/apps/basex/repo
+```
+
+Reflecting the location where you have BaseX installed or have configured its `repo/` directory.
 
