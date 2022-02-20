@@ -1,3 +1,7 @@
+# Generated directories
+build/
+target/
+
 # Compiled class file
 *.class
 
